@@ -9,14 +9,12 @@ from telegram.ext import Application, CommandHandler, MessageHandler, ContextTyp
 
 from utils import split_file, human_readable_size
 
-TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKEN", "8022651374:AAGpeoK6a7nLs-ecBTIjGEoLZMHD3MQAGik")
 bot = Bot(token=TOKEN)
 
 app = Flask(__name__)
 
-# Create PTB application
 application = Application.builder().token(TOKEN).build()
-
 
 @app.route("/", methods=["POST"])
 def webhook():
@@ -24,16 +22,13 @@ def webhook():
     asyncio.run(application.process_update(update))
     return "ok"
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send me a TeraBox link and I’ll fetch + send the file!")
-
+    await update.message.reply_text("Send me a TeraBox link and I’ll send the file!")
 
 def progress_bar(done, total):
     percent = int((done / total) * 100)
     bar = "#" * (percent // 10) + "-" * (10 - percent // 10)
     return f"Progress: [{bar}] {percent}%"
-
 
 async def download_file_with_progress(url, filepath, update: Update):
     r = requests.get(url, stream=True)
@@ -44,10 +39,9 @@ async def download_file_with_progress(url, filepath, update: Update):
             if chunk:
                 f.write(chunk)
                 done += len(chunk)
-                if done % (20 * 1024 * 1024) == 0:  # Every 20MB
+                if done % (20 * 1024 * 1024) == 0:
                     await update.message.reply_text(progress_bar(done, total))
     return filepath
-
 
 async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
@@ -56,10 +50,8 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text("Fetching download link...")
-
     try:
         res = requests.get(f"https://terabox-pro-api.vercel.app/api?link={text}").json()
-
         if not res.get("success"):
             await update.message.reply_text("Failed to get the download link.")
             return
@@ -86,9 +78,10 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(filepath)
 
     except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("Something went wrong!")
+        await update.message.reply_text("Internal error occurred.")
 
-
-# Register handlers
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
